@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok Style App View</title>
+    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font and Tailwind Configuration --><style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        /* --- Global App View Variables --- */
+        :root {
+            --color-primary-red: #FF2D55; 
+            --color-dark-bg: #000000; 
+            --color-inactive-icon: #c7c7c7; /* New color for inactive icons */
+            --status-bar-height: 40px; /* Status bar height */
+            --app-nav-height: 40px; /* Top navigation height */
+            --top-nav-total-height: 80px; /* Total: 40px + 40px */
+            
+            --bottom-nav-base-height: 50px; /* Base height of the bottom panel */
+            --bottom-nav-safe-area: 20px; /* Safe area */
+            --bottom-nav-total-height: 70px; /* TOTAL HEIGHT */
+
+            --fixed-width: 430px; 
+            --fixed-height: 780px; 
+        }
+
+        /* --- Global Styles: Centered Fixed Frame for Canvas Preview --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2f1938, #15092a); /* Neutral background for body */
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; 
+        }
+        
+        /* --- Inner App View Frame (The content with fixed size) --- */
+        .app-frame {
+            /* Fixed dimensions for pixel-perfect design */
+            width: var(--fixed-width); 
+            height: var(--fixed-height); 
+            /* COMPLEX GRADIENT BACKGROUND for .app-frame */
+            background: linear-gradient(
+                135deg, 
+                #040404 0%, 
+                #fe2858 20%, 
+                #de8c9d 50%, 
+                #2af0ea 80%, 
+                #397684 100%
+            );
+            border-radius: 0; 
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); /* Add shadow for separation */
+            overflow: hidden; 
+            position: relative; /* CRITICAL: All children are absolute relative to this */
+            box-sizing: border-box;
+        }
+        
+        /* STATUS BAR: Placeholder for System Status Bar */
+        .status-bar-placeholder {
+            height: var(--status-bar-height); 
+            position: absolute;
+            top: 0;
+            width: 100%;
+            z-index: 50; /* Above everything */
+        }
+
+        /* APP NAVIGATION BAR: Positioning */
+        .app-nav-bar {
+            position: absolute; /* Fixed at top of app-frame */
+            top: var(--status-bar-height); /* Starts below the status bar */
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: var(--app-nav-height);
+            background-color: transparent; 
+            color: white;
+            display: flex;
+            align-items: center; 
+            padding: 0 1rem; 
+            z-index: 50; 
+            box-sizing: border-box;
+            justify-content: space-between; 
+        }
+        
+        /* CONTAINER FOR CENTER LINKS */
+        .nav-links-center {
+            display: flex;
+            align-items: center;
+            /* Center the links, but allow LIVE and Search to push them */
+            margin: 0 auto; 
+            gap: 1.5rem; /* Increased gap for better look */
+        }
+
+        .nav-item {
+            font-size: 0.85rem; 
+            font-weight: 600;
+            opacity: 0.7;
+            position: relative;
+            cursor: pointer;
+            text-align: center;
+            padding: 0 0.5rem;
+            height: var(--app-nav-height); 
+            display: flex;
+            align-items: center;
+            transition: opacity 0.2s;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            font-weight: 800; 
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 4px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 2px;
+            background-color: var(--color-primary-red); 
+            border-radius: 1px;
+        }
+
+        /* LIVE Icon container */
+        .live-icon-container {
+             display: flex;
+             align-items: center;
+        }
+
+        /* Search Icon container */
+        .search-icon-container {
+             display: flex;
+             align-items: center;
+             height: var(--app-nav-height);
+        }
+
+        /* --- Feed Content Styles (Fixed View) --- */
+        .feed-item {
+            /* Feed item now spans the entire area below the status bar */
+            position: absolute;
+            top: 0; /* Starts from the top of the app-frame */
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent; 
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .feed-container {
+            height: 100%; 
+            overflow: hidden; 
+            position: relative; /* Context for absolute children */
+        }
+        
+        /* Container for coins/gifts (full feed area) */
+        .feed-coin-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; /* Important: allow clicks to pass through to underlying video if any */
+        }
+
+
+        .disk-spin { animation: spin 3s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Bottom Navigation Bar Styles */
+        .bottom-nav {
+             background-color: var(--color-dark-bg); 
+             backdrop-filter: none; 
+             padding-bottom: var(--bottom-nav-safe-area); 
+             height: var(--bottom-nav-total-height);
+             z-index: 45; 
+             position: absolute; /* Fixed at bottom of app-frame */
+             bottom: 0;
+             left: 0;
+             right: 0;
+        }
+
+        /* Styles for icons in bottom navigation */
+        .bottom-nav .nav-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        /* Set general fill color for inactive icons */
+        .bottom-nav .nav-item-inactive path {
+            fill: var(--color-inactive-icon) !important; 
+        }
+        /* Active icon is white */
+        .bottom-nav .nav-item-active path {
+            fill: white !important; 
+        }
+
+
+        /* Content Panel Wrapper covers the area between top and bottom navs */
+        .content-panel-wrapper {
+             position: absolute;
+             bottom: var(--bottom-nav-total-height); /* Starts right above bottom navigation */
+             top: var(--top-nav-total-height); /* Ensures content doesn't overlap top nav */
+             left: 0;
+             right: 0;
+             z-index: 20;
+             padding: 0 1rem 1rem 1rem; /* Standard padding: left/right/bottom */
+             display: flex;
+             pointer-events: none; /* Allow clicks through empty areas */
+        }
+        
+        /* Compact interaction panel (RHS) */
+        .interaction-panel {
+            gap: 0.75rem; 
+            pointer-events: auto; /* Make interaction buttons clickable */
+            margin-left: auto; /* Push panel to the right */
+        }
+        .interaction-panel .icon-button {
+            width: 2rem; 
+            height: 2rem;
+        }
+        .interaction-panel .icon-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .interaction-panel .count-text {
+            font-size: 0.75rem; 
+            font-weight: 600;
+            margin-top: 0.3rem; 
+        }
+        
+        /* Compact profile */
+        .profile-avatar {
+            width: 3rem; 
+            height: 3rem;
+            position: relative; 
+        }
+
+        /* Style for the "+" button (Follow) */
+        .profile-add-button {
+            position: absolute;
+            bottom: -8px; 
+            right: 50%; 
+            transform: translateX(50%); 
+            z-index: 55;
+            
+            background-color: var(--color-primary-red); 
+            width: 1.2rem; 
+            height: 1.2rem;
+            border-radius: 9999px; 
+            border: none;
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem; 
+        }
+
+        /* Left Side: Video and Author Info Container */
+        .author-info-container {
+            pointer-events: auto; 
+            align-self: flex-end; /* Push content to bottom of available space */
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            color: white;
+            padding-right: 1rem; /* Space between info and interaction panel */
+        }
+        
+        /* --- Styles for Coins and Gifts --- */
+        .coin-element, .gift-element {
+            position: absolute;
+            /* Встановлюємо початковий розмір для монетки 30x30, як ви просили раніше */
+            width: 30px; 
+            height: 30px;
+            cursor: pointer;
+            transition: transform 0.3s, opacity 0.3s;
+            z-index: 30; 
+            will-change: transform, opacity; 
+        }
+        
+        .gift-element {
+            /* Збільшений розмір для подарунка - 120x120 */
+            width: 120px; 
+            height: 120px;
+        }
+        
+        /* *** ВИПРАВЛЕННЯ *** */
+        /* Якщо ви хочете, щоб монетки були великими з самого початку, 
+           ми встановлюємо їм розмір 120x120px ТУТ: */
+        .coin-element {
+             width: 120px; 
+             height: 120px;
+        }
+        /* ***************** */
+
+        /* Coin/Gift fly-out animation from the heart icon */
+        .coin-flyout {
+            /* 0.3s transition for the initial flight */
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s;
+        }
+
+        /* Gift collection animation to Profile button */
+        .gift-collecting {
+            /* 1s transition for the flight to Profile button -> Збільшено до 2s */
+            transition: transform 2s cubic-bezier(0.42, 0, 0.58, 1.0), opacity 0.5s; /* Easing змінено на linear-like */
+        }
+
+        /* Class for active heart color */
+        .liked-heart {
+            fill: var(--color-primary-red) !important;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'tiktok-red': '#FE2C55',
+                        'tiktok-black': '#000000',
+                        'tiktok-blue': '#25F4EE',
+                        'accent-white': '#fefefe',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    
+    <!-- Inner Adaptive App Frame (The content) --><div class="app-frame">
+        <div class="feed-container">
+            <!-- Feed Item 1: Main Content (Full area, acts as background) --><div class="feed-item" id="video-feed">
+                <!-- Feed content is effectively the background of the App Frame -->
+            </div>
+
+            <!-- Layer for interactive elements (coins/gifts) -->
+            <div class="feed-coin-layer" id="coin-layer"></div>
+
+            <!-- Content: Info and Interaction Panel (Fixed position, high Z-index) -->
+            <div class="content-panel-wrapper"> 
+                
+                <!-- Left Side: Video and Author Info -->
+                <div class="author-info-container" id="author-info">
+                    
+                    <h2 class="text-lg font-extrabold flex items-center">
+                        @digital_ua
+                    </h2>
+                    
+                    <p class="text-xs font-normal leading-snug">
+                        New minimalistic mobile interface design. What do you think? #UIUX #iPhone #Design
+                    </p>
+                    
+                    <!-- Music Track Line --><div class="flex items-center text-xs font-medium opacity-80 mt-2">
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4 12.414V8.586L9.383 3.076zM15 11a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+                        <span>Original Sound: Minimal Tech House</span>
+                        <div class="ml-2 w-4 h-4 bg-black border-2 border-white rounded-full disk-spin">
+                            <!-- New TikTok Music Icon -->
+                            <svg fill="currentColor" viewBox="0 0 24.00 24.00" role="img" xmlns="http://www.w3.org/2000/svg" stroke="none" class="w-full h-full p-1.5">
+                                <g id="SVGRepo_iconCarrier">
+                                    <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" fill="white"></path>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Interaction Panel -->
+                <div class="flex-shrink-0 flex flex-col justify-end items-center text-white space-y-2 ml-3 interaction-panel">
+                    
+                    <!-- Author Avatar -->
+                    <div class="profile-avatar bg-gray-500 border-2 border-white rounded-full flex items-center justify-center text-sm font-bold mt-auto cursor-pointer" id="avatar-btn">
+                        A
+                        <!-- Кнопка "+": позиціонування виправлено та стилі оновлено -->
+                        <span class="profile-add-button">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
+                        </span>
+                    </div>
+
+                    <!-- Like Button (UPDATED with ID and dedicated click handler) -->
+                    <div class="icon-group cursor-pointer active:scale-90 transition-transform" id="like-button">
+                        <svg class="w-8 h-8 text-white icon-button" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" id="like-icon"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                        <span class="count-text" id="like-count-text">2,507</span>
+                    </div>
+                    
+                    <!-- Comments (UPDATED to new SVG) -->
+                    <div class="icon-group cursor-pointer active:scale-90 transition-transform" id="comments-btn">
+                        <svg class="w-8 h-8 text-white icon-button" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" stroke="none">
+                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier">
+                                <!-- Main comment shape (white) -->
+                                <path d="M12,2C6.5,2,2,6.5,2,12c0,2.3,0.8,4.5,2.3,6.3l-2,2c-0.4,0.4-0.4,1,0,1.4C2.5,21.9,2.7,22,3,22h9c5.5,0,10-4.5,10-10S17.5,2,12,2z" fill="currentColor"></path>
+                                <!-- Three dots (black, imitating transparency) -->
+                                <circle cx="8" cy="12" r="1" fill="var(--color-dark-bg)" />
+                                <circle cx="12" cy="12" r="1" fill="var(--color-dark-bg)" />
+                                <circle cx="16" cy="12" r="1" fill="var(--color-dark-bg)" />
+                            </g>
+                        </svg>
+                        <span class="count-text">164</span>
+                    </div>
+
+                    <!-- Save (NEW ELEMENT: Solid white fill) -->
+                    <div class="icon-group cursor-pointer active:scale-90 transition-transform" id="save-btn">
+                        <svg class="w-8 h-8 text-white icon-button" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6Z" fill="currentColor" stroke="none"></path> 
+                        </g>
+                        </svg>
+                        <span class="count-text">1,093</span>
+                    </div>
+
+                    <!-- Share (Forward - UPDATED) -->
+                    <div class="icon-group cursor-pointer active:scale-90 transition-transform" id="share-btn">
+                        <svg class="w-8 h-8 text-white icon-button" viewBox="0 0 24.00 24.00" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.192"></g><g id="SVGRepo_iconCarrier"> <path d="M14.554 3.9974L19.2301 8.13188C21.0767 9.76455 22 10.5809 22 11.6325C22 12.6842 21.0767 13.5005 19.2301 15.1332L14.554 19.2677C13.7111 20.0129 13.2897 20.3856 12.9422 20.2303C12.5947 20.0751 12.5947 19.5143 12.5947 18.3925V15.6472C8.35683 15.6472 3.76579 17.6545 2 21C2 10.2943 8.27835 7.61792 12.5947 7.61792V4.87257C12.5947 3.75082 12.5947 3.18995 12.9422 3.03474C13.2897 2.87953 13.7111 3.25215 14.554 3.9974Z" fill="currentColor" stroke-width="0.312" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                        <span class="count-text">851</span>
+                    </div>
+                    
+                    <!-- Music Disk/Cover (UPDATED: Now a TikTok icon) --><div class="w-8 h-8 bg-black/70 border-2 border-white rounded-full disk-spin mt-3">
+                        <svg fill="currentColor" viewBox="0 0 24.00 24.00" role="img" xmlns="http://www.w3.org/2000/svg" stroke="none" class="w-full h-full p-1.5">
+                            <g id="SVGRepo_iconCarrier">
+                                <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" fill="white"></path>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+            </div>
+            <!-- End of Feed Item -->
+        </div>
+        
+        <!-- Placeholder for System Status Bar (Empty) --><div class="status-bar-placeholder"></div>
+        
+        <!-- APP NAVIGATION BAR - Fixed, below status bar space (Top Navigation) --><div class="app-nav-bar">
+            
+            <!-- 1. Left Side: Live Icon -->
+            <div class="live-icon-container" id="live-btn">
+                <span class="text-xs font-bold bg-red-500 px-1.5 py-0.5 rounded leading-none">LIVE</span>
+            </div>
+
+            <!-- 2. Center: Navigation Links -->
+            <div class="nav-links-center">
+                <div class="nav-item" id="explore-btn">Explore</div> 
+                <div class="nav-item" id="following-btn">Following</div>
+                <div class="nav-item active" id="foryou-btn">For You</div>
+            </div>
+
+            <!-- 3. Right Side: Search Icon -->
+            <div class="search-icon-container text-white cursor-pointer" id="search-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- 3. Bottom Navigation Bar -->
+        <div class="absolute bottom-0 left-0 right-0 z-40 bottom-nav p-2 pt-3 flex justify-around items-center">
+            
+            <!-- Home (Active) -->
+            <div class="flex flex-col items-center nav-item-active text-white cursor-pointer opacity-100" id="home-btn">
+                <!-- UPDATED Home SVG -->
+                <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="home" class="icon glyph" stroke="none">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier">
+                        <path d="M21.71,12.71a1,1,0,0,1-1.42,0L20,12.42V20.3A1.77,1.77,0,0,1,18.17,22H16a1,1,0,0,1-1-1V15.1a1,1,0,0,0-1-1H10a1,1,0,0,0-1,1V21a1,1,0,0,1-1,1H5.83A1.77,1.77,0,0,1,4,20.3V12.42l-.29.29a1,1,0,0,1-1.42,0,1,1,0,0,1,0-1.42l9-9a1,1,0,0,1,1.42,0l9,9A1,1,0,0,1,21.71,12.71Z" fill="white"></path>
+                    </g>
+                </svg>
+                <span class="text-xs mt-0.5 font-semibold text-white">Home</span>
+            </div>
+
+            <!-- Discover (Inactive) -->
+            <div class="flex flex-col items-center nav-item-inactive text-white/70 hover:text-white cursor-pointer" id="discover-btn">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.982 8.99791C17.5399 7.7427 16.2573 6.46011 15.0021 7.01799L10.0018 9.24033C9.66249 9.39115 9.39115 9.66249 9.24033 10.0018L7.01798 15.0021C6.46011 16.2573 7.74269 17.5399 8.99791 16.982L13.9982 14.7597C14.3375 14.6089 14.6089 14.3375 14.7597 13.9982L16.982 8.99791ZM10.9898 10.9898L14.6264 9.37359L13.0102 13.0102L9.37359 14.6264L10.9898 10.9898Z" fill="currentColor"></path> 
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23ZM12 20.9869C7.03665 20.9869 3.01306 16.9633 3.01306 12C3.01306 7.03665 7.03665 3.01306 12 3.01306C16.9633 3.01306 20.9869 7.03665 20.9869 12C20.9869 16.9633 16.9633 20.9869 12 20.9869Z" fill="currentColor"></path> 
+                    </g>
+                </svg>
+                <span class="text-xs mt-0.5">Discover</span>
+            </div>
+
+            <!-- Create Button (Center) - REPLACED WITH IMAGE AND SIZED UP -->
+            <div class="w-28 h-14 rounded-lg mb-0 flex items-center justify-center cursor-pointer relative" id="create-btn">
+                <!-- The image is intentionally made larger here (w-28 h-14) -->
+                <img src="https://i.postimg.cc/bvcWVVzW/fe2858.png" 
+                     alt="Create Button" 
+                     class="w-full h-full object-contain rounded-lg"
+                     onerror="this.onerror=null;this.src='https://placehold.co/112x56/FE2C55/ffffff?text=CREATE+x2';"
+                />
+            </div>
+
+
+            <!-- Inbox (Inactive) -->
+            <div class="flex flex-col items-center nav-item-inactive text-white/70 hover:text-white cursor-pointer" id="inbox-btn">
+                <svg class="nav-icon" viewBox="0 0 24.00 24.00" fill="currentColor">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                        <path fill-rule="evenodd" d="M19,2 C20.5949286,2 21.9034643,3.25157398 21.9948968,4.82401157 L22,5 L22,15 C22,16.5949286 20.748426,17.9034643 19.1759884,17.9948968 L19,18 L15.5,18 L12.8,21.6 C12.611,21.852 12.315,22 12,22 C11.724375,22 11.4632969,21.8866875 11.2757187,21.6895391 L11.2,21.6 L8.5,18 L5,18 C3.40507143,18 2.09653571,16.748426 2.00510323,15.1759884 L2,15 L2,5 C2,3.40507143 3.25157398,2.09653571 4.82401157,2.00510323 L5,2 L19,2 Z M19,4 L5,4 C4.48835714,4 4.06466327,4.38714796 4.00674599,4.88361625 L4,5 L4,15 C4,15.5116429 4.38714796,15.9353367 4.88361625,15.993254 L5,16 L9,16 C9.275625,16 9.53670313,16.1133125 9.72428125,16.3104609 L9.8,16.4 L12,19.333 L14.2,16.4 C14.365375,16.1795 14.6126719,16.038625 14.8829375,16.0068516 L15,16 L19,16 C19.5116429,16 19.9353367,15.612852 19.993254,15.1163837 L20,15 L20,5 C20,4.48835714 19.612852,4.06466327 19.1163837,4.00674599 L19,4 Z M17,11 C17.552,11 18,11.448 18,12 C18,12.5125714 17.6137143,12.9354694 17.1165685,12.9932682 L17,13 L7,13 C6.448,13 6,12.552 6,12 C6,11.4874286 6.38628571,11.0645306 6.88343149,11.0067318 L7,11 L17,11 Z M17,7 C17.552,7 18,7.448 18,8 C18,8.51257143 17.6137143,8.93546939 17.1165685,8.99326822 L17,9 L7,9 C6.448,9 6,8.552 6,8 C6,7.48742857 6.38628571,7.06453061 6.88343149,7.00673178 L7,7 L17,7 Z" fill="currentColor"></path> 
+                    </g>
+                </svg>
+                <span class="text-xs mt-0.5">Inbox</span>
+            </div>
+
+            <!-- Profile Button (ID added for gift animation target) -->
+            <div class="flex flex-col items-center nav-item-inactive text-white/70 hover:text-white cursor-pointer" id="profile-button">
+                <svg class="nav-icon" viewBox="0 0 20.00 20.00" fill="currentColor">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                        <title>profile</title> 
+                        <desc>Created with Sketch.</desc> 
+                        <g id="Page-1" stroke-width="0.0002" fill="none" fill-rule="evenodd"> 
+                            <g id="Dribbble-Light-Preview" transform="translate(-180.000000, -2159.000000)" fill="currentColor"> 
+                                <g id="icons" transform="translate(56.000000, 160.000000)"> 
+                                    <path d="M134,2008.99998 C131.783496,2008.99998 129.980955,2007.20598 129.980955,2004.99998 C129.980955,2002.79398 131.783496,2000.99998 134,2000.99998 C136.216504,2000.99998 138.019045,2002.79398 138.019045,2004.99998 C138.019045,2007.20598 136.216504,2008.99998 134,2008.99998 M137.775893,2009.67298 C139.370449,2008.39598 140.299854,2006.33098 139.958235,2004.06998 C139.561354,2001.44698 137.368965,1999.34798 134.722423,1999.04198 C131.070116,1998.61898 127.971432,2001.44898 127.971432,2004.99998 C127.971432,2006.88998 128.851603,2008.57398 130.224107,2009.67298 C126.852128,2010.93398 124.390463,2013.89498 124.004634,2017.89098 C123.948368,2018.48198 124.411563,2018.99998 125.008391,2018.99998 C125.519814,2018.99998 125.955881,2018.61598 126.001095,2018.10898 C126.404004,2013.64598 129.837274,2010.99998 134,2010.99998 C138.162726,2010.99998 141.595996,2013.64598 141.998905,2018.10898 C142.044119,2018.61598 142.480186,2018.99998 142.991609,2018.99998 C143.588437,2018.99998 144.051632,2018.48198 143.995366,2017.89098 C143.609537,2013.89498 141.147872,2010.93398 137.775893,2009.67298" fill="currentColor"></path> 
+                                </g> 
+                            </g> 
+                        </g> 
+                    </g>
+                </svg>
+                <span class="text-xs mt-0.5">Profile</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array of gift images
+        const GIFT_IMAGES = [
+            'https://i.postimg.cc/YqL26Rr2/1.webp',
+            'https://i.postimg.cc/QxKNQm88/2.webp',
+            'https://i.postimg.cc/FHtrDSz5/5.webp',
+            'https://i.postimg.cc/rw6VQ4s2/7.webp',
+            'https://i.postimg.cc/BnWSMFbW/6.webp',
+            'https://i.postimg.cc/R06gyHZ3/5d5ced6572464c1cf2b0deb92845014b_png_tplv_obj.webp',
+            'https://i.postimg.cc/jdnqHcxd/3.webp'
+        ];
+        
+        // Coin image URL
+        const COIN_IMAGE = 'https://i.postimg.cc/ZqC3txGH/pngwing_com.png';
+
+        // State variables
+        let likeCount = 0;
+        const MAX_LIKES = 7;
+        const INITIAL_LIKE_COUNT = 2507;
+
+        /**
+         * Calculates random coordinates within the defined bounds.
+         * The coordinates are relative to the 'feed' container.
+         * @param {HTMLElement} feedElement - The feed container element.
+         * @returns {{x: number, y: number}} Random coordinates.
+         */
+        function getRandomCoinPosition(feedElement) {
+            // NOTE: The feedElement (video-feed) spans the entire 430x780 area. 
+            const rect = feedElement.getBoundingClientRect();
+            
+            // Fixed dimensions (based on CSS variables)
+            const TOP_NAV_HEIGHT = 80;
+            const BOTTOM_NAV_HEIGHT = 70;
+            // ВИПРАВЛЕНО: Використовуємо розмір 120px, щоб уникнути виходу за межі при появі
+            const ELEMENT_SIZE = 120; 
+
+            // Defined Area Boundaries (relative to the full 780px height of the app-frame)
+            
+            // X_MIN: 20px from left edge
+            const X_MIN = 20; 
+            
+            // Y_MIN: 20px down from the bottom of the Top Nav (80px)
+            const Y_MIN = TOP_NAV_HEIGHT + 20; // 100px
+            
+            // X_MAX: 20px left of the Interaction Panel (Panel is about 80px wide)
+            const X_MAX = rect.width - 100; // 430 - 100 = 330px
+
+            // Y_MAX: 20px up from the Author Info Container (which starts above bottom nav)
+            const Y_MAX = rect.height - BOTTOM_NAV_HEIGHT - 20; // 780 - 70 - 20 = 690px
+
+            // Calculate ranges considering the ELEMENT_SIZE (120px) 
+            const rangeX = X_MAX - X_MIN - ELEMENT_SIZE; 
+            const rangeY = Y_MAX - Y_MIN - ELEMENT_SIZE;
+
+            // Generate random coordinates within the bounding box 
+            // Ми повертаємо координати центру
+            const x = Math.floor(Math.random() * rangeX) + X_MIN + (ELEMENT_SIZE / 2);
+            const y = Math.floor(Math.random() * rangeY) + Y_MIN + (ELEMENT_SIZE / 2);
+            
+            return { x, y }; // These coordinates are the center of the element relative to app-frame top-left
+        }
+
+        /**
+         * Spawns a coin at a random position, flying out from the like button.
+         * @param {HTMLElement} originElement - The 'like-button' element.
+         */
+        function spawnCoin(originElement) {
+            const appFrame = document.querySelector('.app-frame');
+            const feed = document.getElementById('video-feed');
+            if (!appFrame || !feed) return;
+
+            // 1. Determine origin (like button) position relative to the app-frame
+            const originRect = originElement.getBoundingClientRect();
+            const appRect = appFrame.getBoundingClientRect();
+
+            // Starting point (center of like button) relative to the app-frame container
+            const startX = originRect.left - appRect.left + originRect.width / 2;
+            const startY = originRect.top - appRect.top + originRect.height / 2;
+            
+            // ВИПРАВЛЕНО: Розмір елемента тепер 120x120px
+            const ELEMENT_SIZE = 120; 
+            const HALF_ELEMENT = ELEMENT_SIZE / 2;
+
+            // 2. Determine random placement position within the defined area
+            const { x: placeX, y: placeY } = getRandomCoinPosition(appFrame);
+            
+            // 3. Create Coin Element
+            const coin = document.createElement('img');
+            coin.src = COIN_IMAGE;
+            coin.classList.add('coin-element'); // coin-element тепер 120x120px
+            coin.dataset.state = 'coin'; // State: coin or gift
+            
+            // Position relative to the app-frame: Center 120px element
+            coin.style.left = `${startX - HALF_ELEMENT}px`; 
+            coin.style.top = `${startY - HALF_ELEMENT}px`;
+            
+            // Add click listener
+            coin.addEventListener('click', handleCoinGiftClick);
+            
+            appFrame.appendChild(coin); // Append to app-frame to use full absolute coordinates
+
+            // --- Phase 1: Fly-out (Like button -> Random position) ---
+            // Calculate movement from like button center to random position center
+            const flyOutX = placeX - startX;
+            const flyOutY = placeY - startY;
+
+            // Apply 'coin-flyout' animation style (0.3s)
+            coin.classList.add('coin-flyout');
+            
+            // Translate the coin to the random spawn point
+            setTimeout(() => {
+                // The translation moves the *center* of the 120x120 coin to the target center (placeX, placeY)
+                coin.style.transform = `translate(${flyOutX}px, ${flyOutY}px) scale(1.0)`;
+            }, 10); 
+            
+            // Remove the specific flyout transition class after animation to prepare for gift transition
+            setTimeout(() => {
+                coin.classList.remove('coin-flyout');
+                coin.style.transition = 'transform 0.1s, opacity 0.3s'; // Standard transition for clicking
+            }, 350);
+        }
+
+        /**
+         * Handles the single click event for coin -> gift transformation OR gift -> collection.
+         * @param {Event} event - The click event.
+         */
+        function handleCoinGiftClick(event) {
+            event.stopPropagation();
+            
+            const element = event.currentTarget;
+            let currentState = element.dataset.state;
+            const ELEMENT_SIZE = 120; // Розмір елемента тепер завжди 120px
+
+            if (currentState === 'coin') {
+                // --- Step 1: Coin -> Gift Transformation ---
+                
+                // УВАГА: Оскільки обидва елементи тепер мають однаковий розмір (120x120px), 
+                // нам більше не потрібно робити зміщення позиції left/top.
+                
+                // Знайдемо поточний переклад (translation)
+                const style = window.getComputedStyle(element);
+                const matrix = new WebKitCSSMatrix(style.transform);
+                const currentTx = matrix.e || 0;
+                const currentTy = matrix.f || 0;
+                
+                // 1. Transform appearance
+                const randomGiftUrl = GIFT_IMAGES[Math.floor(Math.random() * GIFT_IMAGES.length)];
+                element.src = randomGiftUrl;
+                element.dataset.state = 'gift';
+                element.classList.add('gift-element'); // gift-element також 120x120px
+                
+                // 2. Retain original translation
+                element.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(1.0)`;
+
+                // Add a small visual pop effect for the transformation
+                element.style.transform += ' scale(1.1)';
+                setTimeout(() => {
+                    const currentTransform = element.style.transform;
+                    element.style.transform = currentTransform.replace(' scale(1.1)', ''); 
+                }, 100);
+
+            } else if (currentState === 'gift') {
+                // --- Step 2: Gift -> Collection Animation ---
+                
+                const profileButton = document.getElementById('profile-button');
+                const appFrame = document.querySelector('.app-frame');
+                if (!profileButton || !appFrame) {
+                    element.remove();
+                    return;
+                }
+
+                element.removeEventListener('click', handleCoinGiftClick);
+
+                // Get positions relative to the appFrame
+                const profileRect = profileButton.getBoundingClientRect();
+                const appRect = appFrame.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                // Target center position relative to appFrame
+                const targetCenterX_AppFrame = (profileRect.left + profileRect.width / 2) - appRect.left;
+                const targetCenterY_AppFrame = (profileRect.top + profileRect.height / 2) - appRect.top;
+                
+                // Current center position relative to appFrame
+                const currentCenterX_AppFrame = (elementRect.left + elementRect.width / 2) - appRect.left;
+                const currentCenterY_AppFrame = (elementRect.top + elementRect.height / 2) - appRect.top;
+                
+                // Find existing translation from CSS matrix
+                const style = window.getComputedStyle(element);
+                const matrix = new WebKitCSSMatrix(style.transform);
+                const currentTx = matrix.e || 0;
+                const currentTy = matrix.f || 0;
+
+                // Calculate the required translation from the element's current *visual* position to the target
+                const translateX_Collect = targetCenterX_AppFrame - currentCenterX_AppFrame;
+                const translateY_Collect = targetCenterY_AppFrame - currentCenterY_AppFrame;
+
+                
+                // Start collection animation (2s transition set in CSS)
+                element.classList.add('gift-collecting');
+                // Apply the new cumulative translation relative to its original position
+                element.style.transform = `translate(${currentTx + translateX_Collect}px, ${currentTy + translateY_Collect}px) scale(0.1)`;
+                element.style.opacity = '0';
+
+                // Remove the gift after animation completes (2s transition time)
+                setTimeout(() => {
+                    element.remove();
+                }, 2000); 
+            }
+        }
+
+        /**
+         * Handles the click on the Like button.
+         */
+        function handleLikeClick() {
+            const likeIcon = document.getElementById('like-icon');
+            const likeCountText = document.getElementById('like-count-text');
+
+            if (likeCount < MAX_LIKES) {
+                likeCount++;
+                likeIcon.classList.add('liked-heart');
+                likeCountText.textContent = (INITIAL_LIKE_COUNT + likeCount).toLocaleString('en-US');
+                
+                // Spawn the coin
+                const likeButtonContainer = document.getElementById('like-button');
+                if (likeButtonContainer) {
+                    spawnCoin(likeButtonContainer);
+                }
+            }
+            // No message/alert on max likes
+        }
+
+        // --- Main Initialization ---
+        window.onload = function() {
+            const likeButton = document.getElementById('like-button');
+            
+            // 1. Like Button Logic
+            if (likeButton) {
+                likeButton.addEventListener('click', handleLikeClick);
+            }
+            
+            // 2. Remove all existing 'onclick' handlers to ensure only the new logic runs
+            const allElements = document.querySelectorAll('[onclick]');
+            allElements.forEach(element => {
+                element.removeAttribute('onclick');
+            });
+            
+            // 3. Ensure the main feed area (click layer) is non-interactive for random clicks, 
+            //    but allow events to bubble up to find the coin/gift element.
+            const feedClickLayer = document.querySelector('.feed-click-layer');
+            if (feedClickLayer) {
+                feedClickLayer.style.pointerEvents = 'none';
+            }
+        };
+    </script>
+</body>
+</html>
